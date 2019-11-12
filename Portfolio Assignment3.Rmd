@@ -1,0 +1,84 @@
+---
+title: "Portfolio assignment 3"
+author: "Kasper Michelsen"
+date: "7/11/2019"
+output: html_document
+---
+## Portfolio assignment 3
+# Part 1 Which properties of words correlate with word-by-word reading times?
+```{r setup, include=FALSE}
+#I set up this command so my working directory is linked with all chunks in the document
+knitr::opts_chunk$set(echo = TRUE, include = TRUE)
+#I download the following packages:
+pacman::p_load(tidyverse,ggplot2, pastecs, WRS2, stringr, stringi)
+#I read and define my dataset using the read.csv command:
+
+#get a vector with names of files using list.files() 
+files <- list.files(path = "Reading experiment logfiles",     #PUT THE NAME OF YOUR FOLDER WITH DATA in the quotes, it also might need '/' in the end, experiment with it :)
+                    pattern = ".csv",  #everything that contains '.csv' in its name will be listed
+                    full.names = T)    #makes it include directory path, so instead of 'logfile_1.csv' it will be 'data/logfile_1.csv')
+
+#read all the files into a tibble (a fancy df)
+data <- lapply(files, read_csv) %>%  # apply read_csv() to every element in files list and send the resulting tibbles to the next line
+  plyr::rbind.fill()  #bind rows from resulting tibbles together so you have one dataset with all of your data
+
+#I do some small modifycations in order to make the 
+data$Gender <- tolower(data$Gender)
+#Try performing the default t-test using formula: Measure ~ Group
+
+#removing outliers
+data$z <- (data$Reaction_time - mean(data$Reaction_time))/sd(data$Reaction_time)
+
+#filtering the dataframe
+data_wool <- data %>% filter(data$z <= 3 | data$z <=-3)
+
+data_VBuilding <- data_wool %>% filter(Version == "building.")
+data_VStream <- data_wool %>% filter(Version == "stream.")
+```
+
+# Please conduct three iterations of correlation analysis, each addressing one of the following three
+word properties: word length, word frequency, and word number.
+```{r}
+#I CHECK FOR NORMALITY
+histdata <-  hist(data_VStream$Reaction_time)
+round(pastecs::stat.desc((data_wool$Reaction_time), basic = FALSE, norm = TRUE), digits = 2)
+
+```
+
+```{r}
+#Transformation of data
+streamtrans <- data_VStream %>% mutate(RT_log = log(data_VStream$Reaction_time), rt_sqrt = sqrt(data_VStream$Reaction_time), RT_inv = 1/data_VStream$Reaction_time)
+buildingtrans <- data_VBuilding %>% mutate(RT_log = log(data_VBuilding$Reaction_time), rt_sqrt = sqrt(data_VBuilding$Reaction_time), RT_inv = 1/data_VBuilding$Reaction_time)
+
+data1 <- mutate(data_wool, Stimulus = str_replace_all(data_wool$Stimulus, "[:punct:]", ""))
+
+data1$Wordlength <- nchar(data1$Stimulus)
+```
+
+
+# Correlation test 
+```{r}
+cor.test(data1$Wordlength,data1$Reaction_time, method = 'spearman')
+```
+
+#MRC
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r cars}
+summary(cars)
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
